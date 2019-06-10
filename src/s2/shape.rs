@@ -51,7 +51,6 @@ type Edges = Vec<Edge>
 
 impl Edges {
 
-	pub fn Len(&self, ) -> i64 { len(self) }
 	pub fn Swap(&self, i: i64, j: i64) { self[i], self[j] = self[j], self[i] }
 	pub fn Less(&self, i: i64, j: i64) -> bool { self[i].Cmp(self[j]) == -1 }
 
@@ -153,7 +152,7 @@ pub fn OriginReferencePoint(contained bool) -> ReferencePoint {
 // certain algorithms such as intersection (see BooleanOperation).
 pub trait Shape {
 	// NumEdges returns the number of edges in this shape.
-	fn NumEdges() -> i64;
+	fn num_edges() -> i64;
 
 	// Edge returns the edge for the given edge index.
 	fn Edge(i int) -> Edge;
@@ -229,7 +228,7 @@ pub trait Shape {
 
 	// IsFull reports whether the Shape contains all points on the sphere.
 	fn IsFull() -> bool;
-	
+
 }
 
 // defaultShapeIsEmpty reports whether this shape contains no points.
