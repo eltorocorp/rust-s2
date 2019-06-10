@@ -229,9 +229,7 @@ pub trait Shape {
 
 	// IsFull reports whether the Shape contains all points on the sphere.
 	fn IsFull() -> bool;
-
-	// We do not support implementations of this interface outside this package.
-	privateInterface()
+	
 }
 
 // defaultShapeIsEmpty reports whether this shape contains no points.
