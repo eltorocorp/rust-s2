@@ -1,5 +1,3 @@
-// Copyright 2017 Google Inc. All rights reserved.
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,115 +10,126 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 use r2::point::Point;
-use r3::vector;
+use s2::point::Point as s2Point;
+use std::cmp::Ordering;
 
 // Edge represents a geodesic edge consisting of two vertices. Zero-length edges are
 // allowed, and can be used to represent points.
+
 pub struct Edge {
-	V0: Point, 
-	V1: Point
+	v0: Point, 
+	v1: Point
 }
 
-impl Edge {
-	// Cmp compares the two edges using the underlying Points Cmp method and returns
-	//
-	//   -1 if e <  other
-	//    0 if e == other
-	//   +1 if e >  other
-	//
-	// The two edges are compared by first vertex, and then by the second vertex.
-	pub fn Cmp(&self, other: Edge) -> i64 {
-		let v0cmp = Cmp(e.V0, other.V0);
-		if (v0cmp != 0) {
-			return v0cmp;
+
+impl Eq for Edge {}
+
+impl Ord for Edge {
+	fn cmp(&self, other: &Edge) -> Ordering {
+		let v0cmp = self.v0.cmp(&other.v0);
+		if v0cmp != Ordering::Equal {
+			v0cmp
 		} else {
-			Cmp(e.V1, other.V1);
+			self.v0.cmp(&other.v1)
 		}
 	}
 }
 
+impl PartialOrd for Edge {
+    fn partial_cmp(&self, other: &Edge) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Edge {
+    fn eq(&self, other: &Edge) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+
 // sortEdges sorts the slice of Edges in place.
-pub fn sortEdges(e: Vec<Edge>) -> Vec<Edge> {
+pub fn sort_edges(mut e: Vec<Edge>) {
 	e.sort()
 }
 
 // edges implements the Sort interface for slices of Edge.
-type Edges = Vec<Edge>
+type Edges = Vec<Edge>;
 
-impl Edges {
-
-	pub fn Swap(&self, i: i64, j: i64) { self[i], self[j] = self[j], self[i] }
-	pub fn Less(&self, i: i64, j: i64) -> bool { self[i].Cmp(self[j]) == -1 }
-
+trait EdgesMethods {
+	fn less(&self, i: i64, j: i64) -> bool;
 }
 
-// ShapeEdgeID is a unique identifier for an Edge within an ShapeIndex,
-// consisting of a (shapeID, edgeID) pair.
+impl EdgesMethods for Edges {
+	fn less(&self, i: i64, j: i64) -> bool { self[i as usize].cmp(&self[j as usize]) == Ordering::Less }
+}
+
+// Shapeedge_id is a unique identifier for an Edge within an ShapeIndex,
+// consisting of a (shape_id, edge_id) pair.
 pub struct ShapeEdgeID {
-	ShapeID: i32,
-	EdgeID:  i32
+	shape_id: i32,
+	edge_id:  i32
 }
 
 impl ShapeEdgeID {
-	// Cmp compares the two ShapeEdgeIDs and returns
+	// Cmp compares the two Shapeedge_ids and returns
 	//
 	//   -1 if s <  other
 	//    0 if s == other
 	//   +1 if s >  other
 	//
 	// The two are compared first by shape id and then by edge id.
-	pub fn Cmp(&self, other: ShapeEdgeID) -> i64 {
-		if (s.ShapeID < other.ShapeID) {
+	pub fn cmp(&self, other: ShapeEdgeID) -> i64 {
+		if self.shape_id < other.shape_id {
 			return -1
-		} else if (case s.ShapeID > other.ShapeID) {
+		} else if self.shape_id > other.shape_id {
 			return 1
 		}
 
-		if (case s.EdgeID < other.EdgeID) {
+		if self.edge_id < other.edge_id {
 			return -1
-		} else if (case s.EdgeID > other.EdgeID)
+		} else if self.edge_id > other.edge_id {
 			return 1
 		}
 		return 0
 	}
 }
 
-// ShapeEdge represents a ShapeEdgeID with the two endpoints of that Edge.
+// ShapeEdge represents a Shapeedge_id with the two endpoints of that Edge.
 pub struct ShapeEdge {
-	ID: ShapeEdgeID,
-	Edge: Edge
+	id: ShapeEdgeID,
+	edge: Edge
 }
 
 // Chain represents a range of edge IDs corresponding to a chain of connected
 // edges, specified as a (start, length) pair. The chain is defined to consist of
 // edge IDs {start, start + 1, ..., start + length - 1}.
 pub struct Chain {
-	Start: i64, 
-	Length: i64
+	start: i64, 
+	length: i64
 }
 
 // ChainPosition represents the position of an edge within a given edge chain,
 // specified as a (chainID, offset) pair. Chains are numbered sequentially
 // starting from zero, and offsets are measured from the start of each chain.
 pub struct ChainPosition {
-	ChainID: i64, 
-	Offset: i64
+	chain_id: i64, 
+	offset: i64
 }
 
 // A ReferencePoint consists of a point and a boolean indicating whether the point
 // is contained by a particular shape.
 pub struct ReferencePoint {
-	Point: Point,
-	Contained: bool
+	point: s2Point,
+	contained: bool
 }
 
 // OriginReferencePoint returns a ReferencePoint with the given value for
 // contained and the origin point. It should be used when all points or no
 // points are contained.
-pub fn OriginReferencePoint(contained bool) -> ReferencePoint {
-	ReferencePoint{Point: OriginPoint(), Contained: contained}
+pub fn origin_reference_point(contained: bool) -> ReferencePoint {
+	ReferencePoint{point: s2Point::origin(), contained: contained}
 }
 
 // Shape represents polygonal geometry in a flexible way. It is organized as a
@@ -152,17 +161,17 @@ pub fn OriginReferencePoint(contained bool) -> ReferencePoint {
 // certain algorithms such as intersection (see BooleanOperation).
 pub trait Shape {
 	// NumEdges returns the number of edges in this shape.
-	fn num_edges() -> i64;
+	fn num_edges(&self) -> i64;
 
 	// Edge returns the edge for the given edge index.
-	fn Edge(i int) -> Edge;
+	fn edge(&self, i: i64) -> Edge;
 
 	// ReferencePoint returns an arbitrary reference point for the shape. (The
 	// containment boolean value must be false for shapes that do not have an interior.)
 	//
 	// This reference point may then be used to compute the containment of other
 	// points by counting edge crossings.
-	fn ReferencePoint() -> ReferencePoint
+	fn reference_point(&self) -> ReferencePoint;
 
 	// NumChains reports the number of contiguous edge chains in the shape.
 	// For example, a shape whose edges are [AB, BC, CD, AE, EF] would consist
@@ -172,7 +181,7 @@ pub trait Shape {
 	// Note that it is always acceptable to implement this method by returning
 	// NumEdges, i.e. every chain consists of a single edge, but this may
 	// reduce the efficiency of some algorithms.
-	fn NumChains() -> i64;
+	fn num_chains(&self) -> i64;
 
 	// Chain returns the range of edge IDs corresponding to the given edge chain.
 	// Edge chains must form contiguous, non-overlapping ranges that cover
@@ -183,21 +192,21 @@ pub trait Shape {
 	//  Chain(0).start == 0
 	//  Chain(i).start + Chain(i).length == Chain(i+1).start, for i < NumChains()-1
 	//  Chain(i).start + Chain(i).length == NumEdges(), for i == NumChains()-1
-	fn Chain(chainID int) -> Chain;
+	fn chain(&self, chain_id: i64) -> Chain;
 
 	// ChainEdgeReturns the edge at offset "offset" within edge chain "chainID".
 	// Equivalent to "shape.Edge(shape.Chain(chainID).start + offset)"
 	// but more efficient.
-	fn ChainEdge(chainID, offset int) -> Edge;
+	fn chain_edge(&self, chain_id: i64, offset: i64) -> Edge;
 
 	// ChainPosition finds the chain containing the given edge, and returns the
 	// position of that edge as a ChainPosition(chainID, offset) pair.
 	//
-	//  shape.Chain(pos.chainID).start + pos.offset == edgeID
-	//  shape.Chain(pos.chainID+1).start > edgeID
+	//  shape.Chain(pos.chainID).start + pos.offset == edge_id
+	//  shape.Chain(pos.chainID+1).start > edge_id
 	//
-	// where pos == shape.ChainPosition(edgeID).
-	fn ChainPosition(edgeID int) ChainPosition;
+	// where pos == shape.ChainPosition(edge_id).
+	fn chain_position(&self, edge_id: i64) -> ChainPosition;
 
 	// Dimension returns the dimension of the geometry represented by this shape,
 	// either 0, 1 or 2 for point, polyline and polygon geometry respectively.
@@ -220,23 +229,23 @@ pub trait Shape {
 	// This method allows degenerate geometry of different dimensions
 	// to be distinguished, e.g. it allows a point to be distinguished from a
 	// polyline or polygon that has been simplified to a single point.
-	fn Dimension() -> i64;
+	fn dimension(&self) -> i64;
 
 	// IsEmpty reports whether the Shape contains no points. (Note that the full
 	// polygon is represented as a chain with zero edges.)
-	fn IsEmpty() -> bool;
+	fn is_empty(&self) -> bool;
 
 	// IsFull reports whether the Shape contains all points on the sphere.
-	fn IsFull() -> bool;
+	fn is_full(&self) -> bool;
 
 }
 
 // defaultShapeIsEmpty reports whether this shape contains no points.
-pub fn defaultShapeIsEmpty(s: Shape) -> bool {
-	return s.NumEdges() == 0 && (s.Dimension() != 2 || s.NumChains() == 0)
+pub fn default_shape_is_empty(s: Box<Shape>) -> bool {
+	return s.num_edges() == 0 && (s.dimension() != 2 || s.num_chains() == 0)
 }
 
 // defaultShapeIsFull reports whether this shape contains all points on the sphere.
-pub fn defaultShapeIsFull(s: Shape) -> bool {
-	return s.NumEdges() == 0 && s.Dimension() == 2 && s.NumChains() > 0
+pub fn default_shape_is_full(s: Box<Shape>) -> bool {
+	return s.num_edges() == 0 && s.dimension() == 2 && s.num_chains() > 0
 }
