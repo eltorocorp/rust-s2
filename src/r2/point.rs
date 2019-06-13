@@ -28,7 +28,6 @@ pub struct Point {
     pub y: f64,
 }
 
-
 impl Eq for Point {}
 
 impl Ord for Point {
@@ -62,17 +61,6 @@ impl PartialEq for Point {
         self.cmp(other) == Ordering::Equal
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 impl std::ops::Add<Point> for Point {
     type Output = Point;
