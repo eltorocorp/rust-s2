@@ -1,6 +1,7 @@
 use cgmath;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
+use std::f64;
 
 use rand;
 use rand::Rng;
@@ -110,12 +111,27 @@ where
     )
 }
 
+// randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and
+// whose other bits are zero.
+pub fn random_bits<R>(rng: &mut R, num: u32) -> u64
+where
+    R: Rng,
+{
+    // Make sure the request is for not more than 63 bits.
+    if num > 63 {
+        num = 63
+    }
+    return rng.gen::<u64>() & ((1 << num) - 1)
+}
+
 // randomFloat64 returns a uniformly distributed value in the range [0,1).
 // Note that the values returned are all multiples of 2**-53, which means that
 // not all possible values in this range are returned.
 pub fn random_f64() -> f64 {
-    let randomFloatBits = 53;
-    return f64::ldexp(randomBits(randomFloatBits), -randomFloatBits)
+    let mut rng = rng();
+
+    const randomFloatBits: i32 = 53;
+    return f64::ldexp(random_bits(&mut rng, randomFloatBits as u32), -randomFloatBits)
 }
 
 // float64Near reports whether the two values are within the given epsilon.

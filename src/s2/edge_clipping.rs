@@ -714,6 +714,7 @@ pub mod test {
     use r3;
     use s1;
     use s2::random;
+    use cgmath::num_traits::pow;
 
     #[test]
     fn test_edge_clipping_intersects_face() {
@@ -760,28 +761,28 @@ pub mod test {
     fn test_clip_to_padded_face(a: Point, b: Point) {
         a.normalize();
         b.normalize();
-        if a == b.mul(-1) {
+        if a == b.0.mul(-1) {
             return
         }
 
         // Test FaceSegements for this pair.
         let segments = face_segments(a, b);
-        let n = segments.length();
+        let n = segments.len();
         if n == 0 {
             panic!("FaceSegments({:?}, {:?}) should have generated at least one entry", a, b);
         }
 
         let biunit = r2::rect::Rect{x: r1::interval::Interval{lo: -1.0, hi: 1.0}, y: r1::interval::Interval{lo: -1.0, hi: 1.0}};
-        let errorRadians = FACE_CLIP_ERROR_RADIANS;
+        let errorRadians = s1::angle::Angle(FACE_CLIP_ERROR_RADIANS);
 
         // The first and last vertices should approximately equal A and B.
         let aPrime = stuv::face_uv_to_xyz(segments[0].face, segments[0].a.x, segments[0].a.y);
-        if a.angle(aPrime) > errorRadians {
-            panic!("{}.Angle({}) = {}, want < {}", a, aPrime, a.angle(aPrime), errorRadians)
+        if a.0.angle(&aPrime) > errorRadians {
+            panic!("{:?}.Angle({:?}) = {:?}, want < {:?}", a, aPrime, a.0.angle(&aPrime), errorRadians)
         }
         let bPrime = stuv::face_uv_to_xyz(segments[n-1].face, segments[n-1].b.x, segments[n-1].b.y);
-        if  b.angle(bPrime) > errorRadians {
-            panic!("{}.Angle({}) = {}, want < {}", b, bPrime, b.angle(bPrime), errorRadians)
+        if  b.0.angle(&bPrime) > errorRadians {
+            panic!("{:?}.Angle({:?}) = {:?}, want < {:?}", b, bPrime, b.0.angle(&bPrime), errorRadians)
         }
 
         let norm = a.cross(&b).normalize();
@@ -815,24 +816,24 @@ pub mod test {
             // be contained in the wedge of angles between A and B (i.e., the dot
             // products with aTan and bTan should be non-negative).
             let p = stuv::face_uv_to_xyz(segments[i].face, segments[i].a.x, segments[i].a.y).normalize();
-            got = p.dot(&norm).abs(); 
-            if got > errorRadians {
-                panic!("{:?}.dot({:?}) = {:?}, want <= {}", p, norm, got, errorRadians)
+            let got = p.dot(&norm.0).abs(); 
+            if got > FACE_CLIP_ERROR_RADIANS {
+                panic!("{:?}.dot({:?}) = {:?}, want <= {}", p, norm, got, FACE_CLIP_ERROR_RADIANS)
             }
-            got = p.dot(&aTan);
-            if got < -errorRadians {
-                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, aTan, got, -errorRadians)
+            let got = p.dot(&aTan.0);
+            if got < -FACE_CLIP_ERROR_RADIANS {
+                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, aTan, got, -FACE_CLIP_ERROR_RADIANS)
             }
-            got = p.dot(&bTan);
-            if  got < -errorRadians {
-                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, bTan, got, -errorRadians)
+            let got = p.dot(&bTan.0);
+            if  got < -FACE_CLIP_ERROR_RADIANS {
+                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, bTan, got, -FACE_CLIP_ERROR_RADIANS)
             }
         }
 
         let mut rng = random::rng();
         let padding = 0.0;
-        if !random::one_in(&rng, 10) {
-            padding = 1e-10 * 1e-5_f64.pow(random::random_f64())
+        if !random::one_in(&mut rng, 10) {
+            padding = 1e-10 * 1e-5_f64.powf(random::random_f64())
         }
 
         let xAxis = a;
@@ -840,12 +841,12 @@ pub mod test {
 
         // Given the points A and B, we expect all angles generated from the clipping
         // to fall within this range.
-        let expectedAngles = s1::interval::Interval{lo: 0.0, hi: a.angle(b) as f64};
+        let expectedAngles = s1::interval::Interval{lo: 0.0, hi: a.0.angle(&b.0).0};
         if expectedAngles.is_inverted() {
             expectedAngles = s1::interval::Interval{hi: expectedAngles.hi, lo: expectedAngles.lo};
         }
         let maxAngles = expectedAngles.expanded(FACE_CLIP_ERROR_RADIANS);
-        let actualAngles = s1::interval::Interval{};
+        let actualAngles = s1::interval::Interval{lo:0.0, hi:0.0};
 
         for face in 0..5 {
             let (aUV, bUV, intersects) = clip_to_padded_face(a, b, face, padding);
@@ -856,30 +857,30 @@ pub mod test {
             let aClip = stuv::face_uv_to_xyz(face, aUV.x, aUV.y).normalize();
             let bClip = stuv::face_uv_to_xyz(face, bUV.x, bUV.y).normalize();
 
-            let got = aClip.dot(&norm).abs();
+            let got = aClip.dot(&norm.0).abs();
             if got > FACE_CLIP_ERROR_RADIANS {
                 panic!("on face {}, a={:?}, b={:?}, aClip={:?}, bClip={:?}, abs({:?}.Dot({:?})) = {}, want <= {}", face, a, b, aClip, bClip, aClip, norm, got, FACE_CLIP_ERROR_RADIANS)
             }
-            let got = bClip.dot(&norm).abs();
+            let got = bClip.dot(&norm.0).abs();
             if got > FACE_CLIP_ERROR_RADIANS {
                 panic!("on face {}, a={:?}, b={:?}, aClip={:?}, bClip={:?}, abs({:?}.Dot({:?})) = {}, want <= {}", face, a, b, aClip, bClip, bClip, norm, got, FACE_CLIP_ERROR_RADIANS)
             }
 
-            if (aClip.angle(a)) as f64 > FACE_CLIP_ERROR_RADIANS {
+            if aClip.angle(&a.0) > errorRadians {
                 let got = aUV.x.abs().max(aUV.y.abs());
                 if !random::f64_eq(got, 1.0 + padding) {
-                    panic!("the largest component of {} = {}, want {}", aUV, got, 1.0 + padding)
+                    panic!("the largest component of {:?} = {:?}, want {}", aUV, got, 1.0 + padding)
                 }
             }
-            if (bClip.angle(b)) as f64 > FACE_CLIP_ERROR_RADIANS {
+            if bClip.angle(&b.0) > errorRadians {
                 let got = bUV.x.abs().max(bUV.y.abs());
                 if !random::f64_eq(got, 1.0 + padding) {
-                    panic!("the largest component of {} = {}, want {}", bUV, got, 1.0 + padding)
+                    panic!("the largest component of {:?} = {:?}, want {}", bUV, got, 1.0 + padding)
                 }
             }
 
-            let aAngle = aClip.dot(&yAxis).atan2(aClip.dot(&xAxis));
-            let bAngle = bClip.dot(&yAxis).atan2(bClip.dot(&xAxis));
+            let aAngle = aClip.dot(&yAxis.0).atan2(aClip.dot(&xAxis.0));
+            let bAngle = bClip.dot(&yAxis.0).atan2(bClip.dot(&xAxis.0));
 
             // Rounding errors may cause bAngle to be slightly less than aAngle.
             // We handle this by constructing the interval with FromPointPair,
@@ -888,10 +889,10 @@ pub mod test {
             if faceAngles.is_inverted() {
                 faceAngles = s1::interval::Interval{hi: faceAngles.hi, lo: faceAngles.lo}
             }
-            if !maxAngles.contains_interval(faceAngles) {
-                panic!("{}.ContainsInterval({}) = false, but should have contained this interval", maxAngles, faceAngles)
+            if !maxAngles.contains_interval(&faceAngles) {
+                panic!("{:?}.ContainsInterval({:?}) = false, but should have contained this interval", maxAngles, faceAngles)
             }
-            actualAngles = actualAngles.union(faceAngles)
+            actualAngles = actualAngles.union(&faceAngles)
         }
         if !actualAngles.expanded(FACE_CLIP_ERROR_RADIANS).contains_interval(&expectedAngles) {
             panic!("the union of all angle segments should be larger than the expected angle")

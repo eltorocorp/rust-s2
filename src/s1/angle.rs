@@ -55,7 +55,7 @@ use std::f64::consts::PI;
 /// When testing for equality, you should allow for numerical errors (float64Eq)
 /// or convert to discrete E5/E6/E7 values first.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
-pub struct Angle(f64);
+pub struct Angle(pub f64);
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug)]
 pub struct Rad(pub f64);
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug)]
