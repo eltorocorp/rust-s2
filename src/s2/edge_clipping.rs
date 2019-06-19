@@ -95,21 +95,21 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
     }
 
     // Convert everything into the (u,v,w) coordinates of the given face. Note
-	// that the cross product *must* be computed in the original (x,y,z)
-	// coordinate system because PointCross (unlike the mathematical cross
-	// product) can produce different results in different coordinate systems
-	// when one argument is a linear multiple of the other, due to the use of
-	// symbolic perturbations.
+    // that the cross product *must* be computed in the original (x,y,z)
+    // coordinate system because PointCross (unlike the mathematical cross
+    // product) can produce different results in different coordinate systems
+    // when one argument is a linear multiple of the other, due to the use of
+    // symbolic perturbations.
     let mut norm_uvw: PointUVW = stuv::face_xyz_to_uvw(f, &a.cross(&b));
     let a_uvw: PointUVW = stuv::face_xyz_to_uvw(f, &a);
     let b_uvw: PointUVW = stuv::face_xyz_to_uvw(f, &b);
 
-	// Padding is handled by scaling the u- and v-components of the normal.
-	// Letting R=1+padding, this means that when we compute the dot product of
-	// the normal with a cube face vertex (such as (-1,-1,1)), we will actually
-	// compute the dot product with the scaled vertex (-R,-R,1). This allows
-	// methods such as intersectsFace, exitAxis, etc, to handle padding
-	// with no further modifications.
+    // Padding is handled by scaling the u- and v-components of the normal.
+    // Letting R=1+padding, this means that when we compute the dot product of
+    // the normal with a cube face vertex (such as (-1,-1,1)), we will actually
+    // compute the dot product with the scaled vertex (-R,-R,1). This allows
+    // methods such as intersectsFace, exitAxis, etc, to handle padding
+    // with no further modifications.
     let scale_uv = 1.0 + padding;
     let scaled_n: PointUVW = Point(r3::vector::Vector{x: scale_uv * norm_uvw.0.x, y: scale_uv * norm_uvw.0.y, z: norm_uvw.0.z});
     if !scaled_n.intersects_face(){ 
@@ -120,8 +120,8 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
     };
 
     // TODO: This is a workaround for extremely small vectors where some
-	// loss of precision can occur in Normalize causing underflow. When PointCross
-	// is updated to work around this, this can be removed.
+    // loss of precision can occur in Normalize causing underflow. When PointCross
+    // is updated to work around this, this can be removed.
     if norm_uvw.0.x.abs().max(norm_uvw.0.y.abs().max(norm_uvw.0.z.abs())) < ldexp(1.0, -511.0) {
         norm_uvw = norm_uvw * ldexp(1.0, 563.0)
     }
@@ -130,7 +130,7 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
     let b_tan = norm_uvw.cross(&b_uvw);
 
     // As described in clipDestination, if the sum of the scores from clipping the two
-	// endpoints is 3 or more, then the segment does not intersect this face
+    // endpoints is 3 or more, then the segment does not intersect this face
     let (a_uv, a_score) = clip_destination(b_uvw, a_uvw, scaled_n * -1_f64, b_tan, a_tan, scale_uv);
     let (b_uv, b_score) = clip_destination(a_uvw, b_uvw, scaled_n * -1_f64, a_tan, b_tan, scale_uv);
 
@@ -142,7 +142,7 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
 // are undefined.
 pub fn clip_edge(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rect) -> (r2::point::Point, r2::point::Point, bool) {
     // Compute the bounding rectangle of AB, clip it, and then extract the new
-	// endpoints from the clipped bound
+    // endpoints from the clipped bound
     let bound = r2::rect::Rect::from_points(&[a,b]);
     let (bound, intersects) = clip_edge_bound(a, b, clip, bound); 
     if !intersects {
@@ -190,7 +190,7 @@ pub fn clip_edge(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rect)
 
 // sum_equal reports whether u + v == w exactly.
 fn sum_equal(u: f64, v: f64, w: f64) -> bool {
-	(u+v == w) && (u == w-v) && (v == w-u)
+    (u+v == w) && (u == w-v) && (v == w-u)
 }
 
 #[derive(Clone,Copy,PartialEq,Debug)]
@@ -337,24 +337,24 @@ fn clip_destination(a: PointUVW, b: PointUVW, scaled_n: PointUVW, a_tan: PointUV
     let p: PointUVW = Point(r3::vector::Vector{x: uv.x, y: uv.y, z: 1.0});
 
     // Determine if the exit point B' is contained within the segment. We do this
-	// by computing the dot products with two inward-facing tangent vectors at A
-	// and B. If either dot product is negative, we say that B' is on the "wrong
-	// side" of that point. As the point B' moves around the great circle AB past
-	// the segment endpoint B, it is initially on the wrong side of B only; as it
-	// moves further it is on the wrong side of both endpoints; and then it is on
-	// the wrong side of A only. If the exit point B' is on the wrong side of
-	// either endpoint, we can't use it; instead the segment is clipped at the
-	// original endpoint B.
-	//
-	// We reject the segment if the sum of the scores of the two endpoints is 3
-	// or more. Here is what that rule encodes:
-	//  - If B' is on the wrong side of A, then the other clipped endpoint A'
-	//    must be in the interior of AB (otherwise AB' would go the wrong way
-	//    around the circle). There is a similar rule for A'.
-	//  - If B' is on the wrong side of either endpoint (and therefore we must
-	//    use the original endpoint B instead), then it must be possible to
-	//    project B onto this face (i.e., its w-coordinate must be positive).
-	//    This rule is only necessary to handle certain zero-length edges (A=B).
+    // by computing the dot products with two inward-facing tangent vectors at A
+    // and B. If either dot product is negative, we say that B' is on the "wrong
+    // side" of that point. As the point B' moves around the great circle AB past
+    // the segment endpoint B, it is initially on the wrong side of B only; as it
+    // moves further it is on the wrong side of both endpoints; and then it is on
+    // the wrong side of A only. If the exit point B' is on the wrong side of
+    // either endpoint, we can't use it; instead the segment is clipped at the
+    // original endpoint B.
+    //
+    // We reject the segment if the sum of the scores of the two endpoints is 3
+    // or more. Here is what that rule encodes:
+    //  - If B' is on the wrong side of A, then the other clipped endpoint A'
+    //    must be in the interior of AB (otherwise AB' would go the wrong way
+    //    around the circle). There is a similar rule for A'.
+    //  - If B' is on the wrong side of either endpoint (and therefore we must
+    //    use the original endpoint B instead), then it must be possible to
+    //    project B onto this face (i.e., its w-coordinate must be positive).
+    //    This rule is only necessary to handle certain zero-length edges (A=B).
     let mut score = 0;
     if (p.0 - a.0).dot(&a_tan.0) < 0.0 {
         score = 2; // B' is on wrong side of A.
@@ -444,9 +444,9 @@ fn edge_intersects_rec(a: r2::point::Point, b: r2::point::Point, r: &r2::rect::R
     }
 
     // Otherwise AB intersects the rect if and only if all four vertices of rect
-	// do not lie on the same side of the extended line AB. We test this by finding
-	// the two vertices of rect with minimum and maximum projections onto the normal
-	// of AB, and computing their dot products with the edge normal.
+    // do not lie on the same side of the extended line AB. We test this by finding
+    // the two vertices of rect with minimum and maximum projections onto the normal
+    // of AB, and computing their dot products with the edge normal.
     let n = (b - a).ortho();
     let (mut i, mut j):(isize, isize) = (0,0);
     if n.x >= 0.0 {
@@ -483,10 +483,10 @@ fn clipped_edge_bound(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::
 // it returns false and the original bound.
 #[allow(dead_code)]
 fn clip_edge_bound(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rect, bound: r2::rect::Rect) -> (r2::rect::Rect, bool) {
-	// negSlope indicates which diagonal of the bounding box is spanned by AB: it
-	// is false if AB has positive slope, and true if AB has negative slope. This is
-	// used to determine which interval endpoints need to be updated each time
-	// the edge is clipped
+    // negSlope indicates which diagonal of the bounding box is spanned by AB: it
+    // is false if AB has positive slope, and true if AB has negative slope. This is
+    // used to determine which interval endpoints need to be updated each time
+    // the edge is clipped
     let neg_slope = (a.x > b.x) != (a.y > b.y);
     let (b0_x, b0_y, up1) = clip_bound_axis(a.x, b.x, bound.x, a.y, b.y, bound.y, neg_slope, clip.x);
     if !up1 {
@@ -547,16 +547,16 @@ pub fn face_segments(a: Point, b: Point) -> Vec<FaceSegment> {
         ]
     }
 
-	// Starting at A, we follow AB from face to face until we reach the face
-	// containing B. The following code is designed to ensure that we always
-	// reach B, even in the presence of numerical errors.
-	//
-	// First we compute the normal to the plane containing A and B. This normal
-	// becomes the ultimate definition of the line AB; it is used to resolve all
-	// questions regarding where exactly the line goes. Unfortunately due to
-	// numerical errors, the line may not quite intersect the faces containing
-	// the original endpoints. We handle this by moving A and/or B slightly if
-	// necessary so that they are on faces intersected by the line AB.
+    // Starting at A, we follow AB from face to face until we reach the face
+    // containing B. The following code is designed to ensure that we always
+    // reach B, even in the presence of numerical errors.
+    //
+    // First we compute the normal to the plane containing A and B. This normal
+    // becomes the ultimate definition of the line AB; it is used to resolve all
+    // questions regarding where exactly the line goes. Unfortunately due to
+    // numerical errors, the line may not quite intersect the faces containing
+    // the original endpoints. We handle this by moving A and/or B slightly if
+    // necessary so that they are on faces intersected by the line AB.
     let mut segment = FaceSegment {
         face: a_face,
         a: r2::point::Point{ x: a_x, y: a_y },
@@ -580,7 +580,7 @@ pub fn face_segments(a: Point, b: Point) -> Vec<FaceSegment> {
     let mut face = a_face;
     while face != b_face {
         // Complete the current segment by finding the point where AB
-		// exits the current face
+        // exits the current face
 
         let n: PointUVW = stuv::face_xyz_to_uvw(face, &ab);
         let exit_axis = n.exit_axis();
@@ -588,8 +588,8 @@ pub fn face_segments(a: Point, b: Point) -> Vec<FaceSegment> {
         segments.push(segment.clone());
         
         // Compute the next face intersected by AB, and translate the exit
-		// point of the current segment into the (u,v) coordinates of the
-		// next face. This becomes the first point of the next segment. 
+        // point of the current segment into the (u,v) coordinates of the
+        // next face. This becomes the first point of the next segment. 
         let exit_xyz = stuv::face_uv_to_xyz(face, segment.b.x, segment.b.y);
         face = next_face(face, segment.b, exit_axis, n, b_face);
         let exit_uvw = stuv::face_xyz_to_uvw(face, &Point(exit_xyz));
@@ -615,7 +615,7 @@ pub fn face_segments(a: Point, b: Point) -> Vec<FaceSegment> {
 // error tolerances.
 fn move_origin_to_valid_face(mut face: u8, a: Point, ab: Point, mut a_uv: r2::point::Point) -> (u8, r2::point::Point) {
     // Fast path: if the origin is sufficiently far inside the face, it is
-	// always safe to use it.
+    // always safe to use it.
     let max_save_uv_coord = 1.0 - FACE_CLIP_ERROR_UV_COORD;
     if a_uv.x.abs().max(a_uv.y.abs()) <= max_save_uv_coord {
         return (face, a_uv)
@@ -624,20 +624,20 @@ fn move_origin_to_valid_face(mut face: u8, a: Point, ab: Point, mut a_uv: r2::po
     // Otherwise check whether the normal AB even intersects this face
     let n: PointUVW = stuv::face_xyz_to_uvw(face, &ab);
     if n.intersects_face() {
-		// Check whether the point where the line AB exits this face is on the
-		// wrong side of A (by more than the acceptable error tolerance).
+        // Check whether the point where the line AB exits this face is on the
+        // wrong side of A (by more than the acceptable error tolerance).
         let uv = n.exit_point(n.exit_axis());
         let exit = stuv::face_uv_to_xyz(face, uv.x, uv.y);
         let a_tan = ab.normalize().cross(&a);
 
-		// We can use the given face
+        // We can use the given face
         if (exit - a.0).dot(&a_tan.0) >= -FACE_CLIP_ERROR_RADIANS {
             return (face, a_uv)
         }
     }
 
     // Otherwise we reproject A to the nearest adjacent face. (If line AB does
-	// not pass through a given face, it must pass through all adjacent faces.)
+    // not pass through a given face, it must pass through all adjacent faces.)
     let mut dir: u8 = 0;
     if a_uv.x.abs() >= a_uv.y.abs(){
         // U-axis
@@ -689,20 +689,20 @@ fn next_face(face: u8, exit: r2::point::Point, axis: Axis, n: PointUVW, target_f
     };
 
     // We return the face that is adjacent to the exit point along the given
-	// axis. If line AB exits *exactly* through a corner of the face, there are
-	// two possible next faces. If one is the target face containing B, then
-	// we guarantee that we advance to that face directly.
-	//
-	// The three conditions below check that (1) AB exits approximately through
-	// a corner, (2) the adjacent face along the non-exit axis is the target
-	// face, and (3) AB exits *exactly* through the corner. (The sumEqual
-	// code checks whether the dot product of (u,v,1) and n is exactly zero.)
+    // axis. If line AB exits *exactly* through a corner of the face, there are
+    // two possible next faces. If one is the target face containing B, then
+    // we guarantee that we advance to that face directly.
+    //
+    // The three conditions below check that (1) AB exits approximately through
+    // a corner, (2) the adjacent face along the non-exit axis is the target
+    // face, and (3) AB exits *exactly* through the corner. (The sumEqual
+    // code checks whether the dot product of (u,v,1) and n is exactly zero.)
     if exit_1minus_a.abs() == 1.0 && stuv::uvw_face(face, 1-axis.value(), exit_1minus_a_pos) == target_face && sum_equal(exit.x*n.0.x, exit.y*n.0.y, -n.0.z) {
         return target_face
     }
 
     // Otherwise return the face that is adjacent to the exit point in the
-	// direction of the exit axis
+    // direction of the exit axis
     stuv::uvw_face(face, axis.value(), exit_a_pos)
 }
 
@@ -712,11 +712,13 @@ pub mod test {
     use super::*;
     use point::Point;
     use r3;
+    use s1;
+    use s2::random;
 
     #[test]
     fn test_edge_clipping_intersects_face() {
         /*
-		{pointUVW{r3.Vector{-3.88578e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, true}
+        {pointUVW{r3.Vector{-3.88578e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, true}
         */
         assert!((Point(r3::vector::Vector{x: 2.05335e-06, y: 3.91604e-22, z: 2.90553e-06}) as PointUVW).intersects_face() == false);
         assert!((Point(r3::vector::Vector{x: -3.91604e-22, y: -2.05335e-06, z: -2.90553e-06}) as PointUVW).intersects_face() == false);
@@ -737,7 +739,202 @@ pub mod test {
     }
 
     #[test]
-    fn test_edge_clipping_exit_point() {
+    fn test_edge_clipping_exit_axis() {
+        assert!((Point(r3::vector::Vector{x: 0.0, y: -(2.0_f64 / 3.0_f64).sqrt(), z: (2.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_axis() == Axis::AxisU);
+        assert!((Point(r3::vector::Vector{x: 0.0, y: (4.0_f64 / 3.0_f64).sqrt(), z: -(4.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_axis() == Axis::AxisU);
+        assert!((Point(r3::vector::Vector{x: -(4.0_f64 / 3.0_f64).sqrt(), y: -(4.0_f64 / 3.0_f64).sqrt(), z: 0.0}) as PointUVW).exit_axis() == Axis::AxisV);
+        assert!((Point(r3::vector::Vector{x: (4.0_f64 / 3.0_f64).sqrt(), y: (4.0_f64 / 3.0_f64).sqrt(), z: 0.0}) as PointUVW).exit_axis() == Axis::AxisV);
+        assert!((Point(r3::vector::Vector{x: (2.0_f64 / 3.0_f64).sqrt(), y: -(2.0_f64 / 3.0_f64).sqrt(), z: 0.0}) as PointUVW).exit_axis() == Axis::AxisV);
+        assert!((Point(r3::vector::Vector{x: 1.67968702783622, y: 0.0, z: 0.870988820096491}) as PointUVW).exit_axis() == Axis::AxisV);
+        assert!((Point(r3::vector::Vector{x: 0.0, y: 2.0_f64.sqrt(), z: 2.0_f64.sqrt()}) as PointUVW).exit_axis() == Axis::AxisU);
+    }
 
+    #[test]
+    fn test_edge_clipping_exit_point() {
+        assert!((Point(r3::vector::Vector{x: -3.88578058618805e-16, y: -(2.0_f64 / 3.0_f64).sqrt(), z: (2.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_point(Axis::AxisU) == r2::point::Point{x: -1_f64, y: 1_f64});
+        assert!((Point(r3::vector::Vector{x: (4.0_f64 / 3.0_f64).sqrt(), y: -(4.0_f64 / 3.0_f64).sqrt(), z: 0_f64}) as PointUVW).exit_point(Axis::AxisV) == r2::point::Point{x: -1_f64, y: -1_f64});
+        assert!((Point(r3::vector::Vector{x: -(4.0_f64 / 3.0_f64).sqrt(), y: -(4.0_f64 / 3.0_f64).sqrt(), z: 0_f64}) as PointUVW).exit_point(Axis::AxisV) == r2::point::Point{x: -1_f64, y: 1_f64});
+        assert!((Point(r3::vector::Vector{x: -6.66134e-16, y: (4.0_f64 / 3.0_f64).sqrt(), z: -(4.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_point(Axis::AxisU) == r2::point::Point{x: 1_f64, y: 1_f64});
+    }
+
+    fn test_clip_to_padded_face(a: Point, b: Point) {
+        a.normalize();
+        b.normalize();
+        if a == b.mul(-1) {
+            return
+        }
+
+        // Test FaceSegements for this pair.
+        let segments = face_segments(a, b);
+        let n = segments.length();
+        if n == 0 {
+            panic!("FaceSegments({:?}, {:?}) should have generated at least one entry", a, b);
+        }
+
+        let biunit = r2::rect::Rect{x: r1::interval::Interval{lo: -1.0, hi: 1.0}, y: r1::interval::Interval{lo: -1.0, hi: 1.0}};
+        let errorRadians = FACE_CLIP_ERROR_RADIANS;
+
+        // The first and last vertices should approximately equal A and B.
+        let aPrime = stuv::face_uv_to_xyz(segments[0].face, segments[0].a.x, segments[0].a.y);
+        if a.angle(aPrime) > errorRadians {
+            panic!("{}.Angle({}) = {}, want < {}", a, aPrime, a.angle(aPrime), errorRadians)
+        }
+        let bPrime = stuv::face_uv_to_xyz(segments[n-1].face, segments[n-1].b.x, segments[n-1].b.y);
+        if  b.angle(bPrime) > errorRadians {
+            panic!("{}.Angle({}) = {}, want < {}", b, bPrime, b.angle(bPrime), errorRadians)
+        }
+
+        let norm = a.cross(&b).normalize();
+        let aTan = norm.cross(&a);
+        let bTan = b.cross(&norm);
+
+        for i in 0..n {
+            // Vertices may not protrude outside the biunit square.
+            if !biunit.contains_point(&segments[i].a) {
+                panic!("biunit.ContainsPoint({:?}) = false, want true", segments[i].a)
+            }
+            if !biunit.contains_point(&segments[i].b) {
+                panic!("biunit.ContainsPoint({:?}) = false, want true", segments[i].b)
+            }
+            if i == 0 {
+                continue
+            }
+
+            // The two representations of each interior vertex (on adjacent faces)
+            // must correspond to exactly the same Point.
+            if segments[i-1].face == segments[i].face {
+                panic!("{:?}.face != {:?}.face", segments[i-1], segments[i])
+            }
+            let got = stuv::face_uv_to_xyz(segments[i-1].face, segments[i-1].b.x, segments[i-1].b.y);
+            let want = stuv::face_uv_to_xyz(segments[i].face, segments[i].a.x, segments[i].a.y);
+            if !got.approx_eq(&want) {
+                panic!("interior vertices on adjacent faces should be the same point. got {:?} != {:?}", got, want)
+            }
+
+            // Interior vertices should be in the plane containing A and B, and should
+            // be contained in the wedge of angles between A and B (i.e., the dot
+            // products with aTan and bTan should be non-negative).
+            let p = stuv::face_uv_to_xyz(segments[i].face, segments[i].a.x, segments[i].a.y).normalize();
+            got = p.dot(&norm).abs(); 
+            if got > errorRadians {
+                panic!("{:?}.dot({:?}) = {:?}, want <= {}", p, norm, got, errorRadians)
+            }
+            got = p.dot(&aTan);
+            if got < -errorRadians {
+                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, aTan, got, -errorRadians)
+            }
+            got = p.dot(&bTan);
+            if  got < -errorRadians {
+                panic!("{:?}.dot({:?}) = {:?}, want >= {}", p, bTan, got, -errorRadians)
+            }
+        }
+
+        let mut rng = random::rng();
+        let padding = 0.0;
+        if !random::one_in(&rng, 10) {
+            padding = 1e-10 * 1e-5_f64.pow(random::random_f64())
+        }
+
+        let xAxis = a;
+        let yAxis = aTan;
+
+        // Given the points A and B, we expect all angles generated from the clipping
+        // to fall within this range.
+        let expectedAngles = s1::interval::Interval{lo: 0.0, hi: a.angle(b) as f64};
+        if expectedAngles.is_inverted() {
+            expectedAngles = s1::interval::Interval{hi: expectedAngles.hi, lo: expectedAngles.lo};
+        }
+        let maxAngles = expectedAngles.expanded(FACE_CLIP_ERROR_RADIANS);
+        let actualAngles = s1::interval::Interval{};
+
+        for face in 0..5 {
+            let (aUV, bUV, intersects) = clip_to_padded_face(a, b, face, padding);
+            if !intersects {
+                continue
+            }
+
+            let aClip = stuv::face_uv_to_xyz(face, aUV.x, aUV.y).normalize();
+            let bClip = stuv::face_uv_to_xyz(face, bUV.x, bUV.y).normalize();
+
+            let got = aClip.dot(&norm).abs();
+            if got > FACE_CLIP_ERROR_RADIANS {
+                panic!("on face {}, a={:?}, b={:?}, aClip={:?}, bClip={:?}, abs({:?}.Dot({:?})) = {}, want <= {}", face, a, b, aClip, bClip, aClip, norm, got, FACE_CLIP_ERROR_RADIANS)
+            }
+            let got = bClip.dot(&norm).abs();
+            if got > FACE_CLIP_ERROR_RADIANS {
+                panic!("on face {}, a={:?}, b={:?}, aClip={:?}, bClip={:?}, abs({:?}.Dot({:?})) = {}, want <= {}", face, a, b, aClip, bClip, bClip, norm, got, FACE_CLIP_ERROR_RADIANS)
+            }
+
+            if (aClip.angle(a)) as f64 > FACE_CLIP_ERROR_RADIANS {
+                let got = aUV.x.abs().max(aUV.y.abs());
+                if !random::f64_eq(got, 1.0 + padding) {
+                    panic!("the largest component of {} = {}, want {}", aUV, got, 1.0 + padding)
+                }
+            }
+            if (bClip.angle(b)) as f64 > FACE_CLIP_ERROR_RADIANS {
+                let got = bUV.x.abs().max(bUV.y.abs());
+                if !random::f64_eq(got, 1.0 + padding) {
+                    panic!("the largest component of {} = {}, want {}", bUV, got, 1.0 + padding)
+                }
+            }
+
+            let aAngle = aClip.dot(&yAxis).atan2(aClip.dot(&xAxis));
+            let bAngle = bClip.dot(&yAxis).atan2(bClip.dot(&xAxis));
+
+            // Rounding errors may cause bAngle to be slightly less than aAngle.
+            // We handle this by constructing the interval with FromPointPair,
+            // which is okay since the interval length is much less than math.Pi.
+            let faceAngles = s1::interval::interval_from_endpoints(aAngle, bAngle);
+            if faceAngles.is_inverted() {
+                faceAngles = s1::interval::Interval{hi: faceAngles.hi, lo: faceAngles.lo}
+            }
+            if !maxAngles.contains_interval(faceAngles) {
+                panic!("{}.ContainsInterval({}) = false, but should have contained this interval", maxAngles, faceAngles)
+            }
+            actualAngles = actualAngles.union(faceAngles)
+        }
+        if !actualAngles.expanded(FACE_CLIP_ERROR_RADIANS).contains_interval(&expectedAngles) {
+            panic!("the union of all angle segments should be larger than the expected angle")
+        }
+
+    }
+
+    #[test]
+    fn test_edge_clipping_clip_to_padded_face() {
+        // Start with a few simple cases.
+        // An edge that is entirely contained within one cube face:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: -0.5, z: -0.5}), Point(r3::vector::Vector{x: 1.0, y: 0.5, z: 0.5}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.5, z: 0.5}), Point(r3::vector::Vector{x: 1.0, y: -0.5, z: -0.5}));
+        // An edge that crosses one cube edge:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}));
+        // An edge that crosses two opposite edges of face 0:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: -1.0}), Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}), Point(r3::vector::Vector{x: 0.75,y: 0.0, z: -1.0}));
+        // An edge that crosses two adjacent edges of face 2:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}));
+        // An edges that crosses three cube edges (four faces):
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}), Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}), Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}));
+
+        // // Comprehensively test edges that are difficult to handle, especially those
+        // // that nearly follow one of the 12 cube edges.
+        // biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+
+        // for i := 0; i < 1000; i++ {
+        //     // Choose two adjacent cube corners P and Q.
+        //     face := randomUniformInt(6)
+        //     i := randomUniformInt(4)
+        //     j := (i + 1) & 3
+        //     p := Point{faceUVToXYZ(face, biunit.Vertices()[i].X, biunit.Vertices()[i].Y)}
+        //     q := Point{faceUVToXYZ(face, biunit.Vertices()[j].X, biunit.Vertices()[j].Y)}
+
+        //     // Now choose two points that are nearly in the plane of PQ, preferring
+        //     // points that are near cube corners, face midpoints, or edge midpoints.
+        //     a := perturbedCornerOrMidpoint(p, q)
+        //     b := perturbedCornerOrMidpoint(p, q)
+        //     test_clip_to_padded_face(t, a, b)
+        // }
     }
 }

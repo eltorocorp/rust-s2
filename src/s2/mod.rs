@@ -16,6 +16,7 @@ pub mod metric;
 pub mod predicates;
 
 pub mod shape;
+pub mod edge_clipping;
 
 #[cfg(test)]
 mod random;

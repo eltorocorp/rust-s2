@@ -187,8 +187,7 @@ impl PreciseVector {
 
 #[cfg(test)]
 mod tests {
-
-	use std::num;
+	
 	use r3::vector::Axis;
 	use r3::precisevector;
 	use r3::vector::Vector;

@@ -1,5 +1,6 @@
 use cgmath;
 use std::f64::consts::PI;
+use std::f64::EPSILON;
 
 use rand;
 use rand::Rng;
@@ -108,3 +109,19 @@ where
         &Point::from_coords(theta.cos() * r, theta.sin() * r, 1. - h).normalize(),
     )
 }
+
+// randomFloat64 returns a uniformly distributed value in the range [0,1).
+// Note that the values returned are all multiples of 2**-53, which means that
+// not all possible values in this range are returned.
+pub fn random_f64() -> f64 {
+    let randomFloatBits = 53;
+    return f64::ldexp(randomBits(randomFloatBits), -randomFloatBits)
+}
+
+// float64Near reports whether the two values are within the given epsilon.
+pub fn f64_near(x: f64, y: f64, e: f64) -> bool {
+    return (x-y).abs() <= e
+}
+
+// float64Eq reports whether the two values are within the default epsilon.
+pub fn f64_eq(x: f64, y: f64) -> bool { return f64_near(x, y, EPSILON) }

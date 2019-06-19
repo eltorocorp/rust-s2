@@ -46,6 +46,18 @@ pub const EMPTY: Interval = Interval { lo: PI, hi: -PI };
 /// a full interval.
 pub const FULL: Interval = Interval { lo: -PI, hi: PI };
 
+pub fn interval_from_endpoints(lo: f64, hi: f64) -> Interval {
+    let mut l = lo;
+    let mut h = hi;
+    if lo == -PI && hi != PI {
+        l = PI;
+    }
+    if hi == -PI && lo != PI {
+        h = PI;
+    }
+    return Interval{lo:l, hi:h}
+}
+
 /// Compute distance from a to b in [0,2π], in a numerically stable way.
 fn positive_distance(a: f64, b: f64) -> f64 {
     let d = b - a;
