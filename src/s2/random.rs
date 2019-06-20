@@ -2,12 +2,18 @@ use cgmath;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
 use std::f64;
+use libm::ldexp;
+use std::ops::Mul;
+use std::ops::Add;
 
 use rand;
 use rand::Rng;
 use s2::cap::Cap;
 use s2::cellid::*;
 use s2::point::{self, Point};
+use r3;
+
+pub static DBL_EPSILON: f64 = 2.2204460492503131e-16;
 
 pub fn rng() -> rand::prng::XorShiftRng {
     use rand::prelude::*;
@@ -118,10 +124,56 @@ where
     R: Rng,
 {
     // Make sure the request is for not more than 63 bits.
-    if num > 63 {
-        num = 63
+    let mut n = num;
+    if n > 63 {
+        n = 63
     }
-    return rng.gen::<u64>() & ((1 << num) - 1)
+    return rng.gen::<u64>() & ((1 << n) - 1)
+}
+
+// OriginPoint returns a unique "origin" on the sphere for operations that need a fixed
+// reference point. In particular, this is the "point at infinity" used for
+// point-in-polygon testing (by counting the number of edge crossings).
+//
+// It should *not* be a point that is commonly used in edge tests in order
+// to avoid triggering code to handle degenerate cases (this rules out the
+// north and south poles). It should also not be on the boundary of any
+// low-level S2Cell for the same reason.
+pub fn origin_point() -> Point {
+    return Point(r3::vector::Vector{x: -0.0099994664350250197, y: 0.0025924542609324121, z: 0.99994664350250195})
+}
+
+
+// PointFromCoords creates a new normalized point from coordinates.
+//
+// This always returns a valid point. If the given coordinates can not be normalized
+// the origin point will be returned.
+//
+// This behavior is different from the C++ construction of a S2Point from coordinates
+// (i.e. S2Point(x, y, z)) in that in C++ they do not Normalize.
+pub fn point_from_coords(x:f64, y:f64, z:f64) -> Point {
+    if x == 0.0 && y == 0.0 && z == 0.0 {
+        return origin_point()
+    }
+    return Point(r3::vector::Vector{x, y, z}.normalize())
+}
+
+// randomPoint returns a random unit-length vector.
+pub fn random_point() -> Point {
+    return point_from_coords(random_uniform_f64(-1.0, 1.0),
+        random_uniform_f64(-1.0, 1.0), random_uniform_f64(-1.0, 1.0))
+}
+
+// randomUniformFloat64 returns a uniformly distributed value in the range [min, max).
+pub fn random_uniform_f64(min:f64, max:f64) -> f64 {
+    return min + random_f64() * (max - min)
+}
+
+// randomUniformInt returns a uniformly distributed integer in the range [0,n).
+// NOTE: This is replicated here to stay in sync with how the C++ code generates
+// uniform randoms. (instead of using Go's math/rand package directly).
+pub fn random_uniform_int(n: i64) -> i64 {
+    return (random_f64() * n as f64) as i64
 }
 
 // randomFloat64 returns a uniformly distributed value in the range [0,1).
@@ -130,8 +182,8 @@ where
 pub fn random_f64() -> f64 {
     let mut rng = rng();
 
-    const randomFloatBits: i32 = 53;
-    return f64::ldexp(random_bits(&mut rng, randomFloatBits as u32), -randomFloatBits)
+    const RANDOM_FLOAT_BITS: i32 = 53;
+    return ldexp(random_bits(&mut rng, RANDOM_FLOAT_BITS as u32) as f64, -RANDOM_FLOAT_BITS)
 }
 
 // float64Near reports whether the two values are within the given epsilon.
@@ -141,3 +193,32 @@ pub fn f64_near(x: f64, y: f64, e: f64) -> bool {
 
 // float64Eq reports whether the two values are within the default epsilon.
 pub fn f64_eq(x: f64, y: f64) -> bool { return f64_near(x, y, EPSILON) }
+
+// perturbedCornerOrMidpoint returns a Point from a line segment whose endpoints are
+// difficult to handle correctly. Given two adjacent cube vertices P and Q,
+// it returns either an edge midpoint, face midpoint, or corner vertex that is
+// in the plane of PQ and that has been perturbed slightly. It also sometimes
+// returns a random point from anywhere on the sphere.
+pub fn perturbed_corner_or_midpoint(p: Point, q: Point) -> Point {
+    let mut a = p.mul((random_uniform_int(3) - 1) as f64).add(q.mul((random_uniform_int(3) - 1) as f64));
+    let mut rng = rng();
+    if one_in(&mut rng, 10) {
+        // This perturbation often has no effect except on coordinates that are
+        // zero, in which case the perturbed value is so small that operations on
+        // it often result in underflow.
+        a = a.add(random_point().mul(1e-300_f64.powf(random_f64())));
+    } else if one_in(&mut rng, 2) {
+        // For coordinates near 1 (say > 0.5), this perturbation yields values
+        // that are only a few representable values away from the initial value.
+        a = a.add(random_point().mul(4.0 * DBL_EPSILON));
+    } else {
+        // A perturbation whose magnitude is in the range [1e-25, 1e-10].
+        a = a.add(random_point().mul(1e-10 * 1e-15_f64.powf(random_f64())));
+    }
+
+    if a.0.norm2() < f64::MIN {
+        // If a.Norm2() is denormalized, Normalize() loses too much precision.
+        return perturbed_corner_or_midpoint(p, q)
+    }
+    return a
+}
