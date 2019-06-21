@@ -143,7 +143,6 @@ pub fn origin_point() -> Point {
     return Point(r3::vector::Vector{x: -0.0099994664350250197, y: 0.0025924542609324121, z: 0.99994664350250195})
 }
 
-
 // PointFromCoords creates a new normalized point from coordinates.
 //
 // This always returns a valid point. If the given coordinates can not be normalized

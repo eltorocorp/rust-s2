@@ -19,6 +19,7 @@ rand = "0.5"
 cgmath = "0.16"
 libm = "0.1.3"
 bigdecimal = "*"
+float_extras = "0.1.6"
 
 [profile.release]
 debug = 2

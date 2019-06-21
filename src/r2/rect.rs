@@ -21,7 +21,7 @@ use r1::interval::{self, Interval};
 use r2::point::Point;
 
 /// Rect represents a closed axis-aligned rectangle in the (x,y) plane.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rect {
     /// x interval of the rect
     pub x: Interval,

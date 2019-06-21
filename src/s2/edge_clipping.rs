@@ -709,6 +709,8 @@ fn next_face(face: u8, exit: r2::point::Point, axis: Axis, n: PointUVW, target_f
 
 #[cfg(test)]
 pub mod test {
+    extern crate float_extras;
+
     use super::*;
     use point::Point;
     use r1;
@@ -719,6 +721,7 @@ pub mod test {
     use std::ops::Add;
     use std::ops::Sub;
     use std::ops::Mul;
+
 
     #[test]
     fn test_edge_clipping_intersects_face() {
@@ -950,14 +953,14 @@ pub mod test {
     pub fn get_fraction(x:r2::point::Point, a:r2::point::Point, b:r2::point::Point) -> f64 {
         // A bound for the error in edge clipping plus the error in the calculation
         // (which is similar to EdgeIntersectsRect).
-        let errorDist = EDGE_CLIP_ERROR_UV_DIST + INTERSECT_RECT_ERROR_UV_DIST;
+        let error_dist = EDGE_CLIP_ERROR_UV_DIST + INTERSECT_RECT_ERROR_UV_DIST;
         if a == b {
             return 0.0
         }
         let dir = b.sub(a).normalize();
         let got = (x.sub(a).dot(&dir.ortho())).abs();
-        if got > errorDist {
-            panic!("getFraction({:?}, {:?}, {:?}) = {:?}, which exceeds errorDist {:?}", x, a, b, got, errorDist);
+        if got > error_dist {
+            panic!("getFraction({:?}, {:?}, {:?}) = {:?}, which exceeds errorDist {:?}", x, a, b, got, error_dist);
         }
         return x.sub(a).dot(&dir)
     }
@@ -1021,7 +1024,7 @@ pub mod test {
             panic!("{:?}.ContainsPoint({:?}) = {:?}, want true", clip, p, got);
         }
         if p != a {
-            let p1 = r2::point::Point{x: p.x.next_after(a.x), y: p.y.next_after(a.y)};
+            let p1 = r2::point::Point{x: float_extras::f64::nextafter(p.x, a.x), y: float_extras::f64::nextafter(p.y, a.y)};
             let got = clip.contains_point(&p1);
             if got {
                 panic!("{:?}.ContainsPoint({:?}) = {:?}, want false", clip, p1, got);
@@ -1065,12 +1068,13 @@ pub mod test {
             r2::rect::EMPTY
         ];
 
-        for r in test_rects.iter() {
+        for ra in test_rects.iter() {
             for _i in 0..1000 {
-                let a = choose_rect_endpoint(*r);
-                let b = choose_rect_endpoint(*r);
+                let r = ra.clone();
+                let a = choose_rect_endpoint(r);
+                let b = choose_rect_endpoint(r);
 
-                let (a_clip, b_clip, intersects) = clip_edge(a, b, *r);
+                let (a_clip, b_clip, intersects) = clip_edge(a, b, r);
                 if !intersects {
                     if edge_intersects_rec(a, b, &r.expanded_by_margin(-error_dist)) {
                         panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({}) = true, want false", a, b, r, -error_dist)
@@ -1089,8 +1093,8 @@ pub mod test {
                     }
 
                     // Check that the clipped portion of AB is as large as possible.
-                    check_point_on_boundary(a_clip, a, *r);
-                    check_point_on_boundary(b_clip, b, *r);
+                    check_point_on_boundary(a_clip, a, r);
+                    check_point_on_boundary(b_clip, b, r);
                 }
 
                 // Choose an random initial bound to pass to clipEdgeBound.
@@ -1100,8 +1104,8 @@ pub mod test {
                     // Precondition of clipEdgeBound not met
                     continue
                 }
-                let max_bound = bound.intersection(r);
-                let (bound, intersects) = clip_edge_bound(a, b, *r, bound);
+                let max_bound = bound.intersection(&r);
+                let (bound, intersects) = clip_edge_bound(a, b, r, bound);
                 if !intersects {
                     if edge_intersects_rec(a, b, &max_bound.expanded_by_margin(-error_dist)) {
                         panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({:?}) = true, want false", a, b, max_bound.expanded_by_margin(-error_dist), -error_dist)
