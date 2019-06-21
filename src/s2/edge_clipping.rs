@@ -990,7 +990,7 @@ pub mod test {
             // Return a point on one of the two extended diagonals.
             let diag = random::random_uniform_int(2);
             let t = random::random_uniform_f64(-1.0, 2.0);
-            return clip.vertices()[diag as usize].mul(1.0 - t).add(clip.vertices()[(diag+2) as usize].mul(t))
+            return (&clip.vertices()[diag as usize] * (1.0 - t)).add(&clip.vertices()[(diag+2) as usize] * t)
         }
         return r2::point::Point{x: random_point_from_interval(clip.x), y: random_point_from_interval(clip.y)}
     }
@@ -1007,7 +1007,7 @@ pub mod test {
         }
 
         if random::one_in(&mut rng, 3) {
-            return a.add(b.sub(a).mul(random::random_f64()))
+            return a.add(&b.sub(a) * random::random_f64())
         }
         return r2::point::Point{x: random::random_uniform_f64(a.x, b.x), y: random::random_uniform_f64(a.y, b.y)}
     }
