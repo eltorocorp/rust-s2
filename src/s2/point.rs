@@ -149,9 +149,9 @@ impl Point {
         if v.x == 0. && v.y == 0. && v.z == 0. {
             // The only result that makes sense mathematically is to return zero, but
             // we find it more convenient to return an arbitrary orthogonal vector.
-            Point(self.0.ortho())
+            return Point(self.0.ortho())
         } else {
-            Point(v)
+            return Point(v)
         }
     }
 

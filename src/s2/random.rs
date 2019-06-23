@@ -221,3 +221,9 @@ pub fn perturbed_corner_or_midpoint(p: Point, q: Point) -> Point {
     }
     return a
 }
+
+
+#[cfg(test)]
+pub mod test {
+
+}
