@@ -87,7 +87,6 @@ pub fn clip_to_face(a: Point, b: Point, face: u8) -> (r2::point::Point, r2::poin
 // in (u,v) space, this method clips to [-R,R]x[-R,R] where R=(1+padding).
 // Padding must be non-negative.
 pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::point::Point, r2::point::Point, bool) {
-    println!("a: {:?}, b: {:?}, f: {:?}", a, b,f);
     // Fast path: both endpoints are on the given face
     if stuv::face(&a.0) == f && stuv::face(&b.0) == f {
         let (au, av) = stuv::valid_face_xyz_to_uv(f, &a.0);
@@ -116,7 +115,7 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
     let scaled_n: PointUVW = Point(r3::vector::Vector{x: scale_uv * norm_uvw.0.x, y: scale_uv * norm_uvw.0.y, z: norm_uvw.0.z});
     if !scaled_n.intersects_face(){
         return (r2::point::Point{x: 0.0, y:0.0}, r2::point::Point{x: 0.0, y:0.0}, false)
-     }
+    }
     let ldexp = |x: f64, exp: f64| -> f64 {
         x * (exp.exp2() as f64) 
     };
@@ -128,16 +127,13 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
         norm_uvw = norm_uvw * ldexp(1.0, 563.0)
     }
     norm_uvw = norm_uvw.normalize();
-    let a_tan = norm_uvw.cross(&a_uvw);
-    let b_tan = norm_uvw.cross(&b_uvw);
+    let a_tan = norm_uvw.cross(&a_uvw).normalize();
+    let b_tan = b_uvw.cross(&norm_uvw).normalize();
 
     // As described in clipDestination, if the sum of the scores from clipping the two
     // endpoints is 3 or more, then the segment does not intersect this face
     let (a_uv, a_score) = clip_destination(b_uvw, a_uvw, scaled_n * -1_f64, b_tan, a_tan, scale_uv);
     let (b_uv, b_score) = clip_destination(a_uvw, b_uvw, scaled_n * -1_f64, a_tan, b_tan, scale_uv);
-
-    println!("auv: {:?}, ascore: {:?}", a_uv, a_score);
-    println!("buv: {:?}, bscore: {:?}", b_uv, b_score);
 
     (a_uv, b_uv, a_score+b_score < 3)
 }
@@ -228,7 +224,6 @@ impl PointUVW {
         // We only need to consider the cases where u or v is the smallest value,
         // since if w is the smallest then both expressions below will have a
         // positive LHS and a negative RHS
-        println!("a: {}, b: {}",(v >= w-u), (u >= w-v));
         (v >= w-u) && (u >= w-v)
     }
 
@@ -333,14 +328,11 @@ fn clip_destination(a: PointUVW, b: PointUVW, scaled_n: PointUVW, a_tan: PointUV
     // Optimization: if B is within the safe region of the face, use it.
     let max_save_uv_coord = 1.0 - FACE_CLIP_ERROR_UV_COORD;
     if b.0.z > 0.0 {
-        println!("b: {:?}", b);
-        println!("0000000000000000000000000000000000000000000");
         let uv = r2::point::Point{x: b.0.x / b.0.z,  y: b.0.y / b.0.z };
         if uv.x.abs().max(uv.y.abs()) < max_save_uv_coord {
             return (uv, 0)
         } 
     }
-
     let mut uv = &(scaled_n.exit_point(scaled_n.exit_axis())) * scale_uv;
     let p: PointUVW = Point(r3::vector::Vector{x: uv.x, y: uv.y, z: 1.0});
 
@@ -365,10 +357,8 @@ fn clip_destination(a: PointUVW, b: PointUVW, scaled_n: PointUVW, a_tan: PointUV
     //    This rule is only necessary to handle certain zero-length edges (A=B).
     let mut score = 0;
     if (p.0 - a.0).dot(&a_tan.0) < 0.0 {
-        println!("11111111111111111111111111111111111111111111");
         score = 2; // B' is on wrong side of A.
     } else if (p.0 - b.0).dot(&b_tan.0) < 0.0{
-        println!("22222222222222222222222222222222222222222222");
         score = 1; // B' is on wrong side of B.
     }
 
@@ -377,7 +367,7 @@ fn clip_destination(a: PointUVW, b: PointUVW, scaled_n: PointUVW, a_tan: PointUV
             score = 3; // B cannot be projected onto this face.
         } else {
             let v = b.0;
-            uv = r2::point::Point{x: v.x / v.z, y: v.y / v.z}
+            let uv = r2::point::Point{x: v.x / v.z, y: v.y / v.z};
         }
     }
 
@@ -773,8 +763,6 @@ pub mod test {
         let a = (Point(r3::vector::Vector{x: -3.88578058618805e-16, y: -(2.0_f64 / 3.0_f64).sqrt(), z: (2.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_point(Axis::AxisU);
         let b = r2::point::Point{x: -1_f64, y: 1_f64};
 
-        println!("a: {:?},  b: {:?}", a, b);
-
         assert!(((Point(r3::vector::Vector{x: -3.88578058618805e-16, y: -(2.0_f64 / 3.0_f64).sqrt(), z: (2.0_f64 / 3.0_f64).sqrt()}) as PointUVW).exit_point(Axis::AxisU) - r2::point::Point{x: -1_f64, y: 1_f64}) <= r2::point::Point{x: 0.0000000000001, y: 0.0000000000001});
         assert!(((Point(r3::vector::Vector{x: (4.0_f64 / 3.0_f64).sqrt(), y: -(4.0_f64 / 3.0_f64).sqrt(), z: 0_f64}) as PointUVW).exit_point(Axis::AxisV) - r2::point::Point{x: -1_f64, y: -1_f64}) <= r2::point::Point{x: 0.0000000000001, y: 0.0000000000001});
         assert!(((Point(r3::vector::Vector{x: -(4.0_f64 / 3.0_f64).sqrt(), y: -(4.0_f64 / 3.0_f64).sqrt(), z: 0_f64}) as PointUVW).exit_point(Axis::AxisV) - r2::point::Point{x: -1_f64, y: 1_f64}) <= r2::point::Point{x: 0.0000000000001, y: 0.0000000000001});
@@ -811,8 +799,6 @@ pub mod test {
         let norm = a.cross(&b).normalize();
         let a_tan = norm.cross(&a).normalize();
         let v = (norm.0 + a.0).cross(&(a.0 - norm.0));
-        // println!("v: {:?}, true? {}", v, v.x == 0. && v.y == 0. && v.z == 0.);
-        // println!("atan: {:?}, norm: {:?}, a: {:?}", a_tan, norm, a);
         let b_tan = b.cross(&norm);
 
         for i in 0..n {
@@ -874,10 +860,9 @@ pub mod test {
         let max_angles = expected_angles.expanded(FACE_CLIP_ERROR_RADIANS);
         let mut actual_angles = s1::interval::Interval{lo:0.0, hi:0.0};
 
-        for face in 0..5 {
+        for face in 0..6 {
             let (a_uv, b_uv, intersects) = clip_to_padded_face(a, b, face, padding);
             if !intersects {
-                println!("{}", face);
                 continue
             }
 
@@ -908,7 +893,6 @@ pub mod test {
 
             let a_angle = a_clip.dot(&y_axis.0).atan2(a_clip.dot(&x_axis.0));
             let b_angle = b_clip.dot(&y_axis.0).atan2(b_clip.dot(&x_axis.0));
-            // println!("at1: {}, at2: {}, yaxis: {:?}", b_clip.dot(&y_axis.0), b_clip.dot(&x_axis.0), y_axis.0);
 
             // Rounding errors may cause b_angle to be slightly less than a_angle.
             // We handle this by constructing the interval with FromPointPair,
@@ -917,9 +901,8 @@ pub mod test {
             if face_angles.is_inverted() {
                 face_angles = s1::interval::Interval{hi: face_angles.hi, lo: face_angles.lo}
             }
-            // println!("max angles: {:?}, face angles: {:?}, contains? {}", max_angles, face_angles, !max_angles.contains_interval(&face_angles));
             if !max_angles.contains_interval(&face_angles) {
-                panic!("{:?}.ContainsInterval({:?}) = false, but should have contained this interval", max_angles, face_angles)
+                panic!("a: {:?}, b: {:?}, face: {}, {:?}.ContainsInterval({:?}) = false, but should have contained this interval",a,b,face, max_angles, face_angles)
             }
             actual_angles = actual_angles.union(&face_angles)
         }
@@ -934,40 +917,40 @@ pub mod test {
         // Start with a few simple cases.
         // An edge that is entirely contained within one cube face:
         test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: -0.5, z: -0.5}), Point(r3::vector::Vector{x: 1.0, y: 0.5, z: 0.5}));
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.5, z: 0.5}), Point(r3::vector::Vector{x: 1.0, y: -0.5, z: -0.5}));
-        // // An edge that crosses one cube edge:
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}));
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}));
-        // // An edge that crosses two opposite edges of face 0:
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: -1.0}), Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}));
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}), Point(r3::vector::Vector{x: 0.75,y: 0.0, z: -1.0}));
-        // // An edge that crosses two adjacent edges of face 2:
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}));
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}));
-        // // An edges that crosses three cube edges (four faces):
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}), Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}));
-        // test_clip_to_padded_face(Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}), Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.5, z: 0.5}), Point(r3::vector::Vector{x: 1.0, y: -0.5, z: -0.5}));
+        // An edge that crosses one cube edge:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.0}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.0}));
+        // An edge that crosses two opposite edges of face 0:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: -1.0}), Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.75, y: 0.0, z: 1.0}), Point(r3::vector::Vector{x: 0.75,y: 0.0, z: -1.0}));
+        // An edge that crosses two adjacent edges of face 2:
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}), Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 0.0, y: 1.0, z: 0.75}), Point(r3::vector::Vector{x: 1.0, y: 0.0, z: 0.75}));
+        // An edges that crosses three cube edges (four faces):
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}), Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}));
+        test_clip_to_padded_face(Point(r3::vector::Vector{x: -1.0, y: 0.95, z: 0.9}), Point(r3::vector::Vector{x: 1.0, y: 0.9, z: 0.95}));
 
         // Comprehensively test edges that are difficult to handle, especially those
         // that nearly follow one of the 12 cube edges.
-        // let x = r1::interval::Interval{lo: -1.0, hi:1.0};
-        // let y = r1::interval::Interval{lo: -1.0, hi:1.0};
-        // let biunit = r2::rect::Rect{x:x, y:y};
+        let x = r1::interval::Interval{lo: -1.0, hi:1.0};
+        let y = r1::interval::Interval{lo: -1.0, hi:1.0};
+        let biunit = r2::rect::Rect{x:x, y:y};
 
-        // for _c in 0..1000 {
-        //     // Choose two adjacent cube corners P and Q.
-        //     let face = random::random_uniform_int(6);
-        //     let i = random::random_uniform_int(4);
-        //     let j = (i + 1) & 3;
-        //     let p = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[i as usize].x, biunit.vertices()[i as usize].y));
-        //     let q = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[j as usize].x, biunit.vertices()[j as usize].y));
+        for _c in 0..1000 {
+            // Choose two adjacent cube corners P and Q.
+            let face = random::random_uniform_int(6);
+            let i = random::random_uniform_int(4);
+            let j = (i + 1) & 3;
+            let p = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[i as usize].x, biunit.vertices()[i as usize].y));
+            let q = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[j as usize].x, biunit.vertices()[j as usize].y));
 
-        //     // Now choose two points that are nearly in the plane of PQ, preferring
-        //     // points that are near cube corners, face midpoints, or edge midpoints.
-        //     let a = random::perturbed_corner_or_midpoint(p, q);
-        //     let b = random::perturbed_corner_or_midpoint(p, q);
-        //     test_clip_to_padded_face(a, b)
-        // }
+            // Now choose two points that are nearly in the plane of PQ, preferring
+            // points that are near cube corners, face midpoints, or edge midpoints.
+            let a = random::perturbed_corner_or_midpoint(p, q);
+            let b = random::perturbed_corner_or_midpoint(p, q);
+            test_clip_to_padded_face(a, b)
+        }
     }
 
     // get_fraction returns the fraction t of the given point X on the line AB such that
