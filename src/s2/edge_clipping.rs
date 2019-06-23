@@ -332,8 +332,8 @@ impl PointUVW {
 fn clip_destination(a: PointUVW, b: PointUVW, scaled_n: PointUVW, a_tan: PointUVW, b_tan: PointUVW, scale_uv: f64) -> (r2::point::Point, i32) {
     // Optimization: if B is within the safe region of the face, use it.
     let max_save_uv_coord = 1.0 - FACE_CLIP_ERROR_UV_COORD;
-    println!("b: {:?}", b);
     if b.0.z > 0.0 {
+        println!("b: {:?}", b);
         println!("0000000000000000000000000000000000000000000");
         let uv = r2::point::Point{x: b.0.x / b.0.z,  y: b.0.y / b.0.z };
         if uv.x.abs().max(uv.y.abs()) < max_save_uv_coord {
