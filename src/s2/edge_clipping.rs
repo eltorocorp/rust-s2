@@ -937,20 +937,23 @@ pub mod test {
         let y = r1::interval::Interval{lo: -1.0, hi:1.0};
         let biunit = r2::rect::Rect{x:x, y:y};
 
-        for _c in 0..1000 {
-            // Choose two adjacent cube corners P and Q.
-            let face = random::random_uniform_int(6);
-            let i = random::random_uniform_int(4);
-            let j = (i + 1) & 3;
-            let p = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[i as usize].x, biunit.vertices()[i as usize].y));
-            let q = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[j as usize].x, biunit.vertices()[j as usize].y));
+        // for _c in 0..1 {
+        //     println!("C: {}", _c);
+        //     // Choose two adjacent cube corners P and Q.
+        //     let face = random::random_uniform_int(6);
+        //     let i = random::random_uniform_int(4);
+        //     let j = (i + 1) & 3;
+        //     let p = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[i as usize].x, biunit.vertices()[i as usize].y));
+        //     let q = Point(stuv::face_uv_to_xyz(face as u8, biunit.vertices()[j as usize].x, biunit.vertices()[j as usize].y));
 
-            // Now choose two points that are nearly in the plane of PQ, preferring
-            // points that are near cube corners, face midpoints, or edge midpoints.
-            let a = random::perturbed_corner_or_midpoint(p, q);
-            let b = random::perturbed_corner_or_midpoint(p, q);
-            test_clip_to_padded_face(a, b)
-        }
+        //     // Now choose two points that are nearly in the plane of PQ, preferring
+        //     // points that are near cube corners, face midpoints, or edge midpoints.
+        //     let a = random::perturbed_corner_or_midpoint(p, q);
+        //     let b = random::perturbed_corner_or_midpoint(p, q);
+        //     println!("p: {:?}, q: {:?}", p, q);
+        //     println!("a: {:?}, b: {:?}", a, b);
+        //     test_clip_to_padded_face(a, b)
+        // }
     }
 
     // get_fraction returns the fraction t of the given point X on the line AB such that
@@ -964,6 +967,7 @@ pub mod test {
         }
         let dir = b.sub(a).normalize();
         let got = (x.sub(a).dot(&dir.ortho())).abs();
+        //println!("got: {:?}, errordist: {:?}, true? {}", got, error_dist, got > error_dist);
         if got > error_dist {
             panic!("getFraction({:?}, {:?}, {:?}) = {:?}, which exceeds errorDist {:?}", x, a, b, got, error_dist);
         }
@@ -991,149 +995,150 @@ pub mod test {
         }
     }
 
-    // // Given a rectangle "clip", choose a point that may lie in the rectangle interior, along an extended edge, exactly at a vertex, or in one of the eight regions exterior to "clip" that are separated by its extended edges.  Also sometimes return points that are exactly on one of the extended diagonals of "clip". All cases are reasonably likely to occur for any given rectangle "clip".
-    // pub fn choose_rect_endpoint(clip: r2::rect::Rect) -> r2::point::Point {
-    //     let mut rng = random::rng();
-    //     if random::one_in(&mut rng, 10) {
-    //         // Return a point on one of the two extended diagonals.
-    //         let diag = random::random_uniform_int(2);
-    //         let t = random::random_uniform_f64(-1.0, 2.0);
-    //         return (&clip.vertices()[diag as usize] * (1.0 - t)).add(&clip.vertices()[(diag+2) as usize] * t)
-    //     }
-    //     return r2::point::Point{x: random_point_from_interval(clip.x), y: random_point_from_interval(clip.y)}
-    // }
+    // Given a rectangle "clip", choose a point that may lie in the rectangle interior, along an extended edge, exactly at a vertex, or in one of the eight regions exterior to "clip" that are separated by its extended edges.  Also sometimes return points that are exactly on one of the extended diagonals of "clip". All cases are reasonably likely to occur for any given rectangle "clip".
+    pub fn choose_rect_endpoint(clip: r2::rect::Rect) -> r2::point::Point {
+        let mut rng = random::rng();
+        if random::one_in(&mut rng, 10) {
+            // Return a point on one of the two extended diagonals.
+            let diag = random::random_uniform_int(2);
+            let t = random::random_uniform_f64(-1.0, 2.0);
+            return (&clip.vertices()[diag as usize] * (1.0 - t)).add(&clip.vertices()[(diag+2) as usize] * t)
+        }
+        return r2::point::Point{x: random_point_from_interval(clip.x), y: random_point_from_interval(clip.y)}
+    }
 
-    // // Choose a random point in the rectangle defined by points A and B, sometimes
-    // // returning a point on the edge AB or the points A and B themselves.
-    // pub fn choose_point_in_rect(a: r2::point::Point, b: r2::point::Point) -> r2::point::Point {
-    //     let mut rng = random::rng();
-    //     if random::one_in(&mut rng, 5) {
-    //         if random::one_in(&mut rng, 2) {
-    //             return a
-    //         }
-    //         return b
-    //     }
+    // Choose a random point in the rectangle defined by points A and B, sometimes
+    // returning a point on the edge AB or the points A and B themselves.
+    pub fn choose_point_in_rect(a: r2::point::Point, b: r2::point::Point) -> r2::point::Point {
+        let mut rng = random::rng();
+        if random::one_in(&mut rng, 5) {
+            if random::one_in(&mut rng, 2) {
+                return a
+            }
+            return b
+        }
 
-    //     if random::one_in(&mut rng, 3) {
-    //         return a.add(&b.sub(a) * random::random_f64())
-    //     }
-    //     return r2::point::Point{x: random::random_uniform_f64(a.x, b.x), y: random::random_uniform_f64(a.y, b.y)}
-    // }
+        if random::one_in(&mut rng, 3) {
+            return a.add(&b.sub(a) * random::random_f64())
+        }
+        return r2::point::Point{x: random::random_uniform_f64(a.x, b.x), y: random::random_uniform_f64(a.y, b.y)}
+    }
 
-    // // Given a point P representing a possibly clipped endpoint A of an edge AB,
-    // // verify that clip contains P, and that if clipping occurred (i.e., P != A)
-    // // then P is on the boundary of clip.
-    // pub fn check_point_on_boundary(p: r2::point::Point, a: r2::point::Point, clip: r2::rect::Rect) {
-    //     let got = clip.contains_point(&p);
-    //     if  !got {
-    //         panic!("{:?}.ContainsPoint({:?}) = {:?}, want true", clip, p, got);
-    //     }
-    //     if p != a {
-    //         let p1 = r2::point::Point{x: float_extras::f64::nextafter(p.x, a.x), y: float_extras::f64::nextafter(p.y, a.y)};
-    //         let got = clip.contains_point(&p1);
-    //         if got {
-    //             panic!("{:?}.ContainsPoint({:?}) = {:?}, want false", clip, p1, got);
-    //         }
-    //     }
-    // }
+    // Given a point P representing a possibly clipped endpoint A of an edge AB,
+    // verify that clip contains P, and that if clipping occurred (i.e., P != A)
+    // then P is on the boundary of clip.
+    pub fn check_point_on_boundary(p: r2::point::Point, a: r2::point::Point, clip: r2::rect::Rect) {
+        let got = clip.contains_point(&p);
+        if  !got {
+            panic!("{:?}.ContainsPoint({:?}) = {:?}, want true", clip, p, got);
+        }
+        if p != a {
+            let p1 = r2::point::Point{x: float_extras::f64::nextafter(p.x, a.x), y: float_extras::f64::nextafter(p.y, a.y)};
+            let got = clip.contains_point(&p1);
+            if got {
+                panic!("{:?}.ContainsPoint({:?}) = {:?}, want false", clip, p1, got);
+            }
+        }
+    }
 
-    // #[test]
-    // pub fn test_edge_clipping_clip_edge() {
-    //     // A bound for the error in edge clipping plus the error in the
-    //     // EdgeIntersectsRect calculation below.
-    //     let error_dist = EDGE_CLIP_ERROR_UV_DIST + INTERSECT_RECT_ERROR_UV_DIST;
+    #[test]
+    pub fn test_edge_clipping_clip_edge() {
+        // A bound for the error in edge clipping plus the error in the
+        // EdgeIntersectsRect calculation below.
+        let error_dist = EDGE_CLIP_ERROR_UV_DIST + INTERSECT_RECT_ERROR_UV_DIST;
 
-    //     let test_rects: [r2::rect::Rect; 10] = [
-    //         r2::rect::Rect::from_points(&[
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
-    //         ]),
-    //         r2::rect::Rect::from_points(&[
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
-    //         ]),
-    //         r2::rect::Rect::from_points(&[
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
-    //         ]),
-    //         r2::rect::Rect::from_points(&[
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
-    //         ]),
-    //         r2::rect::Rect::from_points(&[
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
-    //             r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
-    //         ]),
+        let test_rects: [r2::rect::Rect; 10] = [
+            r2::rect::Rect::from_points(&[
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
+            ]),
+            r2::rect::Rect::from_points(&[
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
+            ]),
+            r2::rect::Rect::from_points(&[
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
+            ]),
+            r2::rect::Rect::from_points(&[
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
+            ]),
+            r2::rect::Rect::from_points(&[
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)},
+                r2::point::Point{x:random::random_uniform_f64(-1.0, 1.0), y:random::random_uniform_f64(-1.0, 1.0)}
+            ]),
 
-    //         // Also clip against one-dimensional, singleton, and empty rectangles.
-    //         r2::rect::Rect{x: r1::interval::Interval{lo:-0.7, hi:-0.7}, y: r1::interval::Interval{lo:0.3, hi:0.35}},
-    //         r2::rect::Rect{x: r1::interval::Interval{lo:0.2, hi:0.5}, y: r1::interval::Interval{lo:0.3, hi:0.3}},
-    //         r2::rect::Rect{x: r1::interval::Interval{lo:-0.7, hi:0.3}, y: r1::interval::Interval{lo:0.0, hi:0.0}},
-    //         r2::rect::Rect::from_points(&[r2::point::Point{x:0.3, y:0.8}]),
-    //         r2::rect::EMPTY
-    //     ];
+            // Also clip against one-dimensional, singleton, and empty rectangles.
+            r2::rect::Rect{x: r1::interval::Interval{lo:-0.7, hi:-0.7}, y: r1::interval::Interval{lo:0.3, hi:0.35}},
+            r2::rect::Rect{x: r1::interval::Interval{lo:0.2, hi:0.5}, y: r1::interval::Interval{lo:0.3, hi:0.3}},
+            r2::rect::Rect{x: r1::interval::Interval{lo:-0.7, hi:0.3}, y: r1::interval::Interval{lo:0.0, hi:0.0}},
+            r2::rect::Rect::from_points(&[r2::point::Point{x:0.3, y:0.8}]),
+            r2::rect::EMPTY
+        ];
 
-    //     for ra in test_rects.iter() {
-    //         for _i in 0..1000 {
-    //             let r = ra.clone();
-    //             let a = choose_rect_endpoint(r);
-    //             let b = choose_rect_endpoint(r);
+        for ra in test_rects.iter() {
+            for _i in 0..1000 {
+                println!("i: {}, ra: {:?}", _i, ra);
+                let r = ra.clone();
+                let a = choose_rect_endpoint(r);
+                let b = choose_rect_endpoint(r);
 
-    //             let (a_clip, b_clip, intersects) = clip_edge(a, b, r);
-    //             if !intersects {
-    //                 if edge_intersects_rec(a, b, &r.expanded_by_margin(-error_dist)) {
-    //                     panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({}) = true, want false", a, b, r, -error_dist)
-    //                 }
-    //             } else {
-    //                 if !edge_intersects_rec(a, b, &r.expanded_by_margin(error_dist)) {
-    //                     panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({}) = false, want true", a, b, r, error_dist)
-    //                 }
+                let (a_clip, b_clip, intersects) = clip_edge(a, b, r);
+                if !intersects {
+                    if edge_intersects_rec(a, b, &r.expanded_by_margin(-error_dist)) {
+                        panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({}) = true, want false", a, b, r, -error_dist)
+                    }
+                } else {
+                    if !edge_intersects_rec(a, b, &r.expanded_by_margin(error_dist)) {
+                        panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({}) = false, want true", a, b, r, error_dist)
+                    }
 
-    //                 // Check that the clipped points lie on the edge AB, and
-    //                 // that the points have the expected order along the segment AB.
-    //                 let got_a = get_fraction(a_clip, a, b);
-    //                 let got_b = get_fraction(b_clip, a, b);
-    //                 if got_a > got_b {
-    //                     panic!("getFraction({:?},{:?},{:?}) = {:?}, getFraction({:?}, {:?}, {:?}) = {:?}; {} < {} = false, want true", a_clip, a, b, got_a, b_clip, a, b, got_b, got_a, got_b)
-    //                 }
+                    // Check that the clipped points lie on the edge AB, and
+                    // that the points have the expected order along the segment AB.
+                    let got_a = get_fraction(a_clip, a, b);
+                    let got_b = get_fraction(b_clip, a, b);
+                    if got_a > got_b {
+                        panic!("getFraction({:?},{:?},{:?}) = {:?}, getFraction({:?}, {:?}, {:?}) = {:?}; {} < {} = false, want true", a_clip, a, b, got_a, b_clip, a, b, got_b, got_a, got_b)
+                    }
 
-    //                 // Check that the clipped portion of AB is as large as possible.
-    //                 check_point_on_boundary(a_clip, a, r);
-    //                 check_point_on_boundary(b_clip, b, r);
-    //             }
+                    // Check that the clipped portion of AB is as large as possible.
+                    check_point_on_boundary(a_clip, a, r);
+                    check_point_on_boundary(b_clip, b, r);
+                }
 
-    //             // Choose an random initial bound to pass to clipEdgeBound.
-    //             let initial_clip = r2::rect::Rect::from_points(&[choose_point_in_rect(a, b), choose_point_in_rect(a, b)]);
-    //             let bound = clipped_edge_bound(a, b, initial_clip);
-    //             if bound.is_empty() {
-    //                 // Precondition of clipEdgeBound not met
-    //                 continue
-    //             }
-    //             let max_bound = bound.intersection(&r);
-    //             let (bound, intersects) = clip_edge_bound(a, b, r, bound);
-    //             if !intersects {
-    //                 if edge_intersects_rec(a, b, &max_bound.expanded_by_margin(-error_dist)) {
-    //                     panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({:?}) = true, want false", a, b, max_bound.expanded_by_margin(-error_dist), -error_dist)
-    //                 }
-    //             } else {
-    //                 if !edge_intersects_rec(a, b, &max_bound.expanded_by_margin(error_dist)) {
-    //                     panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({:?}) = false, want true", a, b, max_bound.expanded_by_margin(error_dist), error_dist)
-    //                 }
-    //                 // check that the bound is as large as possible.
-    //                 let mut ai = 0;
-    //                 if a.x > b.x {
-    //                     ai = 1;
-    //                 }
-    //                 let mut aj = 0;
-    //                 if a.y > b.y {
-    //                     aj = 1;
-    //                 }
-    //                 check_point_on_boundary(bound.vertex_ij(ai, aj), a, max_bound);
-    //                 check_point_on_boundary(bound.vertex_ij(1-ai, 1-aj), b, max_bound);
-    //             }
-    //         }
-    //     }
-    // }
+                // Choose an random initial bound to pass to clipEdgeBound.
+                let initial_clip = r2::rect::Rect::from_points(&[choose_point_in_rect(a, b), choose_point_in_rect(a, b)]);
+                let bound = clipped_edge_bound(a, b, initial_clip);
+                if bound.is_empty() {
+                    // Precondition of clipEdgeBound not met
+                    continue
+                }
+                let max_bound = bound.intersection(&r);
+                let (bound, intersects) = clip_edge_bound(a, b, r, bound);
+                if !intersects {
+                    if edge_intersects_rec(a, b, &max_bound.expanded_by_margin(-error_dist)) {
+                        panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({:?}) = true, want false", a, b, max_bound.expanded_by_margin(-error_dist), -error_dist)
+                    }
+                } else {
+                    if !edge_intersects_rec(a, b, &max_bound.expanded_by_margin(error_dist)) {
+                        panic!("edgeIntersectsRect({:?}, {:?}, {:?}.ExpandedByMargin({:?}) = false, want true", a, b, max_bound.expanded_by_margin(error_dist), error_dist)
+                    }
+                    // check that the bound is as large as possible.
+                    let mut ai = 0;
+                    if a.x > b.x {
+                        ai = 1;
+                    }
+                    let mut aj = 0;
+                    if a.y > b.y {
+                        aj = 1;
+                    }
+                    check_point_on_boundary(bound.vertex_ij(ai, aj), a, max_bound);
+                    check_point_on_boundary(bound.vertex_ij(1-ai, 1-aj), b, max_bound);
+                }
+            }
+        }
+    }
 }
 
 
