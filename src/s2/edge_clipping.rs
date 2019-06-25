@@ -142,13 +142,13 @@ pub fn clip_to_padded_face(a: Point, b: Point, f: u8, padding: f64) -> (r2::poin
 // given rectangle. If there is no intersection, false is returned and aClip and bClip
 // are undefined.
 pub fn clip_edge(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rect) -> (r2::point::Point, r2::point::Point, bool) {
-    println!("clip_edge -- a: {:?}, b: {:?}, clip: {:?}",a,b,clip);
+    //println!("clip_edge -- a: {:?}, b: {:?}, clip: {:?}",a,b,clip);
     // Compute the bounding rectangle of AB, clip it, and then extract the new
     // endpoints from the clipped bound
     let bound1 = r2::rect::Rect::from_points(&[a,b]);
     println!("clip_edge -- bound1: {:?}", bound1);
     let (bound, intersects) = clip_edge_bound(a, b, clip, bound1);
-    println!("clip_edge -- bound2: {:?}, intersects: {:?}", bound, intersects);
+    //println!("clip_edge -- bound2: {:?}, intersects: {:?}", bound, intersects);
     if !intersects {
         return (
             r2::point::Point{x: 0.0, y: 0.0},
@@ -500,7 +500,7 @@ fn clip_edge_bound(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rec
     println!("clip_edge_bound -- a: {:?}, b: {:?}, clip: {:?}, bound: {:?}", a,b,clip,bound);
     let neg_slope = (a.x > b.x) != (a.y > b.y);
     let (b0_x, b0_y, up1) = clip_bound_axis(a.x, b.x, bound.x, a.y, b.y, bound.y, neg_slope, clip.x);
-    println!("clip_edge_bound -- b0x: {:?}, b0y: {:?}, up1: {:?}",b0_x, b0_y, up1);
+    // println!("clip_edge_bound -- b0x: {:?}, b0y: {:?}, up1: {:?}",b0_x, b0_y, up1);
     if !up1 {
         return (bound, false)
     }
@@ -508,7 +508,7 @@ fn clip_edge_bound(a: r2::point::Point, b: r2::point::Point, clip: r2::rect::Rec
     if !up2 {
         return (r2::rect::Rect{x: b0_x, y: b0_y}, false)
     }
-    println!("clip_edge_bound -- b1x: {:?}, b1y: {:?}", b1_x, b1_y);
+    // println!("clip_edge_bound -- b1x: {:?}, b1y: {:?}", b1_x, b1_y);
     return (r2::rect::Rect{x: b1_x, y: b1_y}, true)
 }
 
@@ -981,7 +981,7 @@ pub mod test {
         }
         let dir = b.sub(a).normalize();
         let got = (x.sub(a).dot(&dir.ortho())).abs();
-        println!("xsuba: {:?}, dir: {:?}, got: {:?}, errordist: {:?}, true? {}",x.sub(a), dir, got, error_dist, got > error_dist);
+        //println!("xsuba: {:?}, dir: {:?}, got: {:?}, errordist: {:?}, true? {}",x.sub(a), dir, got, error_dist, got > error_dist);
         if got > error_dist {
             panic!("getFraction({:?}, {:?}, {:?}) = {:?}, which exceeds errorDist {:?}", x, a, b, got, error_dist);
         }
@@ -1060,12 +1060,13 @@ pub mod test {
         }
     }
 
+// i: 6, a: Point { x: -1.3348288747012578, y: 0.35 }, b: Point { x: -0.40397203157649275, y: 0.32691797816671314 }, r: Rect { x: [-0.7000000, -0.7000000], y: [0.3000000, 0.3500000] }
     #[test]
     fn test_testy_test() {
         let error_dist = EDGE_CLIP_ERROR_UV_DIST + INTERSECT_RECT_ERROR_UV_DIST;
         let r = r2::rect::Rect{x: r1::interval::Interval{lo:-0.7, hi:-0.7}, y: r1::interval::Interval{lo:0.3, hi:0.35}};
-        let a = r2::point::Point{ x: -0.7, y: 0.35 }; 
-        let b = r2::point::Point{ x: -0.3759561904062172, y: -0.1431652594460115 };
+        let a = r2::point::Point{ x: -1.3348288747012578, y: 0.35 }; 
+        let b = r2::point::Point{ x: -0.40397203157649275, y: 0.32691797816671314 };
         let (a_clip, b_clip, intersects) = clip_edge(a, b, r);
         println!("ttt -- aclip: {:?}, bclip: {:?}, intersects: {}", a_clip, b_clip, intersects);
         if !intersects {
