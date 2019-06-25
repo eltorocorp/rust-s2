@@ -438,9 +438,9 @@ fn clip_bound_axis(a0: f64, b0: f64, mut bound0: r1::interval::Interval, a1: f64
             println!("D");
             return (bound0, bound1n, false)
         }
-        println!("clip_bound_axis1 -- a0: {:?}, bound0: {:?}, bound1: {:?}",a0,bound0,bound1);
+        // println!("clip_bound_axis1 -- a0: {:?}, bound0: {:?}, bound1: {:?}",a0,bound0,bound1);
     }
-    println!("clip_bound_axis -- a0: {:?}, bound0: {:?}, bound1: {:?}",a0,bound0,bound1);
+    // println!("clip_bound_axis -- a0: {:?}, bound0: {:?}, bound1: {:?}",a0,bound0,bound1);
     return (bound0, bound1, true)
 }
 
