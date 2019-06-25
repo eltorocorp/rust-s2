@@ -441,6 +441,34 @@ impl Point {
     pub fn contains(&self, other: &Point) -> bool {
         self == other
     }
+
+    pub fn cmp(&self, op: &Point) -> std::cmp::Ordering {
+        if self.0.x < op.0.x {
+            return std::cmp::Ordering::Less;
+        }
+        if self.0.x > op.0.x {
+            return std::cmp::Ordering::Greater;
+        }
+
+        // First elements were the same, try the next.
+        if self.0.y < op.0.y {
+            return std::cmp::Ordering::Less;
+        }
+        if self.0.y > op.0.y {
+            return std::cmp::Ordering::Greater;
+        }
+
+        // Second elements were the same return the final compare.
+        if self.0.z < op.0.z {
+            return std::cmp::Ordering::Less;
+        }
+        if self.0.z > op.0.z {
+            return std::cmp::Ordering::Greater;
+        }
+
+        // Both are equal
+        return std::cmp::Ordering::Equal;
+    }
 }
 
 // TODO: Differences from C++
